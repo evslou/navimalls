@@ -9,12 +9,9 @@
 
 // ------------------------------------- Route visual config (6 colour/style combinations) -------------------------------------
 const ROUTE_STYLES = [
-  { mode: 'auto',        criterion: 'distance', color: '#e74c3c', strokeWidth: 4 },
-  { mode: 'auto',        criterion: 'time',     color: '#c0392b', strokeWidth: 4, strokeStyle: 'dash' },
-  { mode: 'pedestrian',  criterion: 'distance', color: '#27ae60', strokeWidth: 4 },
-  { mode: 'pedestrian',  criterion: 'time',     color: '#1e8449', strokeWidth: 4, strokeStyle: 'dash' },
-  { mode: 'masstransit', criterion: 'distance', color: '#2980b9', strokeWidth: 4 },
-  { mode: 'masstransit', criterion: 'time',     color: '#1a5276', strokeWidth: 4, strokeStyle: 'dash' },
+  { mode: 'auto',        color: '#e74c3c', strokeWidth: 4 },
+  { mode: 'pedestrian',  color: '#27ae60', strokeWidth: 4 },
+  { mode: 'masstransit', color: '#2980b9', strokeWidth: 4 },
 ];
 
 const MODE_LABEL = {
@@ -205,12 +202,12 @@ async function runSearch() {
     const tspResp = await fetchJSON('/api/solve-tsp', { points });
     tspResults = tspResp.results;
 
-    // 3️⃣ Draw all 6 routes on the map
-    await drawAllRoutes(tspResults);
-
     // 4️⃣ Render results table
     renderResultsTable(tspResults);
     document.getElementById('results-section').classList.remove('hidden');
+
+    // 3️⃣ Draw all 6 routes on the map
+    await drawAllRoutes(tspResults);
 
   } catch (err) {
     showError('Ошибка: ' + err.message);
@@ -229,7 +226,6 @@ async function drawAllRoutes(results) {
       const style = ROUTE_STYLES[idx];
       const routingMode = res.mode === 'masstransit' ? 'masstransit' : res.mode;
 
-      // Build waypoints array: [[lat,lon], ...]
       const waypoints = res.waypoints.map(p => [p.lat, p.lon]);
 
       const multiRoute = new ymaps.multiRouter.MultiRoute(
@@ -238,24 +234,22 @@ async function drawAllRoutes(results) {
           params: { routingMode },
         },
         {
-          boundsAutoApply: idx === 0,          // only auto-zoom for first route
+          boundsAutoApply: idx === 0,
           routeActiveStrokeColor:  style.color,
           routeActiveStrokeWidth:  style.strokeWidth,
-          routeActiveStrokeStyle:  style.strokeStyle || 'solid',
           routeStrokeColor:        style.color + '55',
           wayPointStartIconColor:  style.color,
           wayPointFinishIconColor: style.color,
-          // Hide intermediate waypoint balloons to reduce clutter
           waypointIconLayout:      'default#image',
           pinVisible:              idx === 0,
         }
       );
 
-      // Once the route model is ready, capture time/distance and update table
       multiRoute.model.events.once('requestsuccess', () => {
         const activeRoute = multiRoute.getActiveRoute();
         if (activeRoute) {
           const props = activeRoute.properties.getAll();
+          // Сохраняем реальные значения
           results[idx]._actualDistance = props.distance ? props.distance.text : '—';
           results[idx]._actualDuration = props.duration ? props.duration.text : '—';
           updateTableRow(idx, results[idx]);
@@ -270,16 +264,10 @@ async function drawAllRoutes(results) {
     });
   });
 
-  // Wait for all routes (max 10 s)
   await Promise.race([
     Promise.all(drawPromises),
     new Promise(r => setTimeout(r, 10_000)),
   ]);
-}
-
-function clearRoutes() {
-  activeRoutes.forEach(r => myMap.geoObjects.remove(r));
-  activeRoutes = [];
 }
 
 // ------------------------------------- Results table -------------------------------------
@@ -293,7 +281,6 @@ function renderResultsTable(results) {
     tr.id = `row-${idx}`;
     tr.innerHTML = `
       <td><span class="badge-mode mode-${res.mode}">${MODE_LABEL[res.mode]}</span></td>
-      <td><span class="criterion-badge crit-${res.criterion}">${CRIT_LABEL[res.criterion]}</span></td>
       <td id="dist-${idx}">—</td>
       <td id="time-${idx}">—</td>
       <td>
@@ -301,7 +288,7 @@ function renderResultsTable(results) {
           style="background:${style.color}" onclick="focusRoute(${idx})">
           Показать
         </button>
-      </td>`;
+       </td>`;
     tbody.appendChild(tr);
   });
 }
@@ -332,12 +319,9 @@ function renderLegend() {
   ROUTE_STYLES.forEach((s, i) => {
     const item = document.createElement('div');
     item.className = 'legend-item';
-    const styleAttr = s.strokeStyle === 'dash'
-      ? `background: repeating-linear-gradient(90deg,${s.color} 0 8px,transparent 8px 12px); height:3px;`
-      : `background:${s.color};`;
     item.innerHTML = `
-      <div class="legend-color" style="${styleAttr}"></div>
-      <span>${MODE_LABEL[s.mode].split(' ')[0]} ${CRIT_LABEL[s.criterion].split(' ')[0]}</span>`;
+      <div class="legend-color" style="background:${s.color}; width:24px; height:4px;"></div>
+      <span>${MODE_LABEL[s.mode]}</span>`;
     legend.appendChild(item);
   });
 }
@@ -369,4 +353,9 @@ function showError(msg) {
 
 function clearError() {
   document.getElementById('error-box').classList.add('hidden');
+}
+
+function clearRoutes() {
+  activeRoutes.forEach(r => myMap.geoObjects.remove(r));
+  activeRoutes = [];
 }
