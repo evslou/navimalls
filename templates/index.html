@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Shop Route Optimizer</title>
+
+  <!-- Yandex Maps JS API 2.1 — key injected by Flask -->
+  <script src="https://api-maps.yandex.ru/2.1/?apikey={{ maps_js_key }}&lang=ru_RU" type="text/javascript"></script>
+
+  <link rel="stylesheet" href="/static/css/style.css" />
+</head>
+<body>
+
+<!-- ----------------------------------------------------------------------
+     SIDEBAR
+     ---------------------------------------------------------------------- -->
+<aside id="sidebar">
+  <div id="sidebar-inner">
+
+    <h1>🛒 Shop Route Optimizer</h1>
+    <p class="subtitle">Найдите оптимальный маршрут по магазинам в радиусе 10 км</p>
+
+    <!-- ----- Step 1: shops ------------------------------------------------- -->
+    <section class="card">
+      <h2>Шаг 1 — Выберите магазины</h2>
+
+      <div id="preset-chips">
+        <span class="chip" data-value="Пятёрочка">Пятёрочка</span>
+        <span class="chip" data-value="Магнит">Магнит</span>
+        <span class="chip" data-value="ВкусВилл">ВкусВилл</span>
+        <span class="chip" data-value="Перекрёсток">Перекрёсток</span>
+        <span class="chip" data-value="Аптека">Аптека</span>
+        <span class="chip" data-value="Дикси">Дикси</span>
+        <span class="chip" data-value="Лента">Лента</span>
+        <span class="chip" data-value="ЛДСР">Леруа Мерлен</span>
+        <span class="chip" data-value="DNS">DNS</span>
+        <span class="chip" data-value="М.Видео">М.Видео</span>
+      </div>
+
+      <div class="input-row">
+        <input id="custom-shop-input" type="text" placeholder="Свой магазин…" />
+        <button id="add-shop-btn" class="btn-secondary">+ Добавить</button>
+      </div>
+
+      <div id="selected-chips"></div>
+    </section>
+
+    <!-- ----- Step 2: start location ---------------------------------------- -->
+    <section class="card">
+      <h2>Шаг 2 — Начальная точка</h2>
+
+      <div class="btn-group">
+        <button id="geoloc-btn" class="btn-secondary">📍 Моё местоположение</button>
+        <button id="map-click-btn" class="btn-secondary" id="map-pick">🖱 Кликнуть на карте</button>
+      </div>
+
+      <div id="start-info" class="info-box hidden">
+        <strong>Старт:</strong> <span id="start-coords-label">—</span>
+      </div>
+    </section>
+
+    <!-- ----- Action ------------------------------------------------------- -->
+    <button id="search-btn" class="btn-primary" disabled>
+      🔍 Найти и построить маршруты
+    </button>
+
+    <div id="spinner" class="hidden">
+      <div class="loader"></div>
+      <span>Вычисляем маршруты…</span>
+    </div>
+
+    <div id="error-box" class="error-box hidden"></div>
+
+    <!-- ----- Results table ------------------------------------------------ -->
+    <section id="results-section" class="hidden">
+      <h2>Результаты</h2>
+
+      <div id="legend"></div>
+
+      <table id="results-table">
+        <thead>
+          <tr>
+            <th>Транспорт</th>
+            <th>Критерий</th>
+            <th>Расстояние</th>
+            <th>Время</th>
+            <th>Действие</th>
+          </tr>
+        </thead>
+        <tbody id="results-body"></tbody>
+      </table>
+
+      <p class="hint">* Время и расстояние уточняются после загрузки маршрута на карте.</p>
+    </section>
+
+  </div><!-- /sidebar-inner -->
+</aside>
+
+<!-- ----------------------------------------------------------------------
+     MAP
+     ---------------------------------------------------------------------- -->
+<main id="map-container">
+  <div id="map"></div>
+</main>
+
+<script src="/static/js/app.js"></script>
+</body>
+</html>
