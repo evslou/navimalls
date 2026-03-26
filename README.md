@@ -1,5 +1,3 @@
-Here is the text translated into a normal, readable format:
-
 ---
 
 ## 🛒 Shop Route Optimizer
