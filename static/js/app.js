@@ -47,8 +47,8 @@ function initMap() {
 
 // ------------------------------------- UI wiring -------------------------------------
 function setupUI() {
-  // Preset shop chips
-  document.querySelectorAll('#preset-chips .chip').forEach(chip => {
+  // Preset shop chips (теперь они в категориях)
+  document.querySelectorAll('#shop-categories .chip').forEach(chip => {
     chip.addEventListener('click', () => togglePreset(chip));
   });
 
@@ -58,6 +58,9 @@ function setupUI() {
     if (e.key === 'Enter') addCustomShop();
   });
 
+  // Clear all button
+  document.getElementById('clear-all-btn').addEventListener('click', clearAllShops);
+
   // Geolocation
   document.getElementById('geoloc-btn').addEventListener('click', useGeolocation);
 
@@ -66,6 +69,14 @@ function setupUI() {
 
   // Main action button
   document.getElementById('search-btn').addEventListener('click', runSearch);
+  
+  const radiusSlider = document.getElementById('radius-slider');
+  const radiusValue = document.getElementById('radius-value');
+  if (radiusSlider && radiusValue) {
+    radiusSlider.addEventListener('input', (e) => {
+      radiusValue.textContent = e.target.value;
+    });
+  }
 }
 
 // ------------------------------------- Shop selection helpers -------------------------------------
@@ -103,8 +114,8 @@ function renderSelectedChips() {
     chip.innerHTML = `${name} <span class="remove-chip">×</span>`;
     chip.querySelector('.remove-chip').addEventListener('click', () => {
       selectedShops.delete(name);
-      // also de-activate preset chip if present
-      document.querySelectorAll('#preset-chips .chip').forEach(c => {
+      // Сбросить активный класс у чипа в категории
+      document.querySelectorAll('#shop-categories .chip').forEach(c => {
         if (c.dataset.value === name) c.classList.remove('active');
       });
       renderSelectedChips();
@@ -112,6 +123,16 @@ function renderSelectedChips() {
     });
     container.appendChild(chip);
   });
+}
+
+function clearAllShops() {
+  selectedShops.clear();
+  // Убираем активный класс со всех чипов в категориях
+  document.querySelectorAll('#shop-categories .chip').forEach(chip => {
+    chip.classList.remove('active');
+  });
+  renderSelectedChips();
+  updateSearchBtn();
 }
 
 // ------------------------------------- Start-point helpers -------------------------------------
@@ -163,16 +184,20 @@ function updateSearchBtn() {
 
 // ------------------------------------- Main flow: search → TSP → display -------------------------------------
 async function runSearch() {
+  let currentPoints = null;
   clearError();
   clearRoutes();
   document.getElementById('results-section').classList.add('hidden');
   showSpinner(true);
+  const radiusKm = parseFloat(document.getElementById('radius-slider').value);
+  const radius = radiusKm * 1000; // в метрах
 
   try {
     // 1️⃣ Find shops near start
     const searchResp = await fetchJSON('/api/search-shops', {
       shops:  [...selectedShops],
       origin: { lat: startPoint.lat, lon: startPoint.lon },
+      radius: radius,
     });
 
     // Collect all found shop locations (take best hit per query)
@@ -187,6 +212,7 @@ async function runSearch() {
         notFound.push(shopResult.query);
       }
     }
+    currentPoints = points; // сохраняем
 
     if (points.length < 2) {
       showSpinner(false);
@@ -201,6 +227,23 @@ async function runSearch() {
     // 2️⃣ Solve TSP on backend
     const tspResp = await fetchJSON('/api/solve-tsp', { points });
     tspResults = tspResp.results;
+
+    function formatOrder(order, points) {
+      return order.map(idx => points[idx].label).join(' → ');
+    }
+
+    const orders = tspResults.map(res => formatOrder(res.order, currentPoints));
+    const allSame = orders.every((val, i, arr) => val === arr[0]);
+    const summaryDiv = document.getElementById('route-order-summary');
+
+    if (allSame) {
+      summaryDiv.innerHTML = `<strong>Порядок посещения:</strong> ${orders[0]}`;
+    } else {
+      summaryDiv.innerHTML = `<strong>Порядок посещения (различается для видов транспорта):</strong><br>
+        🚗 Авто: ${orders[0]}<br>
+        🚶 Пешком: ${orders[1]}<br>
+        🚌 Транспорт: ${orders[2]}`;
+    }
 
     // 4️⃣ Render results table
     renderResultsTable(tspResults);

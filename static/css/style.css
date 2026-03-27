@@ -41,6 +41,57 @@ body { display: flex; background: var(--bg); color: var(--text); }
 h1 { font-size: 1.25rem; font-weight: 700; margin-bottom: 2px; }
 .subtitle { font-size: .8rem; color: var(--muted); margin-bottom: 18px; }
 
+/* Категории */
+#shop-categories {
+  margin-bottom: 12px;
+}
+
+#shop-categories details {
+  margin-bottom: 6px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  padding: 4px 8px;
+}
+
+#shop-categories summary {
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--secondary);
+  padding: 4px 0;
+}
+
+.chip-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+  margin-bottom: 6px;
+}
+
+.clear-all-btn {
+  margin-top: 10px;
+  text-align: right;
+}
+
+.clear-all-btn button {
+  padding: 4px 12px;
+  font-size: 0.75rem;
+}
+
+.slider-container {
+  margin-bottom: 12px;
+}
+.slider-container label {
+  display: block;
+  font-size: 0.85rem;
+  margin-bottom: 4px;
+}
+#radius-slider {
+  width: 100%;
+}
+
 /* ----------------------------------------------------------------------
    Cards
    ---------------------------------------------------------------------- */

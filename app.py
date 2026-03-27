@@ -171,21 +171,22 @@ def geocode_address(address: str, origin: tuple[float, float]) -> Optional[dict]
         return None
 
 
-def search_organizations(query: str, origin: tuple[float, float]) -> list[dict]:
+def search_organizations(query: str, origin: tuple[float, float], radius_m: int = SEARCH_RADIUS_M) -> list[dict]:
     if not YANDEX_SUGGEST_KEY:
         log.error("YANDEX_SUGGEST_KEY is missing")
         return []
 
+    spn_deg = (radius_m / 111000) * 2  # градусы для квадрата ~ диаметр radius_m
     params = {
         "apikey": YANDEX_SUGGEST_KEY,
         "text": query,
         "ll": f"{origin[1]},{origin[0]}",
-        "spn": "0.09,0.09",
+        "spn": f"{spn_deg},{spn_deg}",
         "types": "biz",
         "results": 5,
         "lang": "ru_RU",
-        "attrs": "uri",  # оставим для информации, но не используем
     }
+
     try:
         resp = requests.get(SUGGEST_URL, params=params, timeout=8)
         resp.raise_for_status()
@@ -221,7 +222,7 @@ def search_organizations(query: str, origin: tuple[float, float]) -> list[dict]:
 
         lat, lon = geo_data["lat"], geo_data["lon"]
         dist = haversine(origin, (lat, lon))
-        if dist <= SEARCH_RADIUS_M:
+        if dist <= radius_m:
             results.append({
                 "name": title,
                 "address": address,
@@ -230,7 +231,7 @@ def search_organizations(query: str, origin: tuple[float, float]) -> list[dict]:
                 "distance_m": round(dist),
             })
         else:
-            log.info(f"Distance {dist:.0f} > {SEARCH_RADIUS_M} for {address}")
+            log.info(f"Distance {dist:.0f} > {radius_m} for {address}")
 
     return results
 
@@ -248,6 +249,7 @@ def api_search_shops():
     body = request.get_json(force=True)
     shops: list[str] = body.get("shops", [])
     origin_raw = body.get("origin", {})
+    radius = body.get("radius", SEARCH_RADIUS_M)
 
     if not shops or "lat" not in origin_raw:
         return jsonify({"error": "Missing 'shops' or 'origin'"}), 400
@@ -256,7 +258,7 @@ def api_search_shops():
     response_data = []
 
     for shop_query in shops[:10]:   # hard cap at 10
-        results = search_organizations(shop_query, origin)
+        results = search_organizations(shop_query, origin, radius_m=radius)
         response_data.append({"query": shop_query, "results": results})
         log.info("Search '%s' → %d result(s)", shop_query, len(results))
 
